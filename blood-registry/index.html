@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blood Donor Registry - Home</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">🩸 Blood Donor Registry</div>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="search-donors.html">Search Donors</a></li>
+      <li id="profileLink" style="display:none;"><a href="profile.html">My Profile</a></li>
+      <li id="adminLink" style="display:none;"><a href="admin-dashboard.html">Admin Dashboard</a></li>
+    </ul>
+    <div class="auth-links">
+      <a href="signup.html" id="signupLink">Sign Up</a>
+      <a href="login.html" id="loginLink">Login</a>
+      <a href="#" id="logoutBtn" style="display:none;">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Welcome -->
+  <section class="form-container">
+    <h1>Welcome to the Blood Donor Registry</h1>
+    <p>Find donors, register as a donor, or manage records.</p>
+  </section>
+
+  <!-- Blood Group Statistics (as number cards) -->
+  <section class="form-container">
+    <h2>📊 Blood Group Statistics</h2>
+    <div class="cards" id="statsCards">
+      <!-- Stats will load here -->
+    </div>
+  </section>
+
+  <!-- New Section: Why Donate + Requirements -->
+  <section class="form-container">
+    <h2>❤️ Why Donate Blood?</h2>
+    <p style="text-align:center; font-size:16px; margin-bottom:20px;">
+      "A single pint can save three lives, a single gesture can create a million smiles."
+    </p>
+
+    <h3 style="margin-top:15px; color:#c62828;">📝 Eligibility Requirements:</h3>
+    <ul style="margin-top:10px; margin-left:20px; line-height:1.8;">
+      <li>✅ You must be at least <b>18 years old</b> and in good health.</li>
+      <li>✅ You should weigh a minimum of <b>50 kg (110 lbs)</b>.</li>
+      <li>✅ You should not have donated blood in the last <b>3 months</b>.</li>
+      <li>✅ You must be free from infections and not under any restricted medication.</li>
+      <li>✅ You must have slept well and had a light meal before donation.</li>
+    </ul>
+  </section>
+
+  <!-- Firebase & Logic -->
+  <script type="module">
+    import { app, auth } from "./firebase.js";
+    import { getFirestore, collection, getDocs, doc, getDoc }
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { onAuthStateChanged, signOut }
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    const db = getFirestore(app);
+
+    // Show/hide links in navbar
+    onAuthStateChanged(auth, async (user) => {
+      const signupLink = document.getElementById("signupLink");
+      const loginLink  = document.getElementById("loginLink");
+      const logoutBtn  = document.getElementById("logoutBtn");
+      const adminLink  = document.getElementById("adminLink");
+      const profileLink = document.getElementById("profileLink");
+
+      if (user) {
+        signupLink.style.display = "none";
+        loginLink.style.display  = "none";
+        logoutBtn.style.display  = "inline-block";
+        profileLink.style.display = "inline-block";
+
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists() && userDoc.data().role === "admin") {
+            adminLink.style.display = "inline-block";
+          } else {
+            adminLink.style.display = "none";
+          }
+        } catch (_) {
+          adminLink.style.display = "none";
+        }
+      } else {
+        signupLink.style.display = "inline-block";
+        loginLink.style.display  = "inline-block";
+        logoutBtn.style.display  = "none";
+        adminLink.style.display  = "none";
+        profileLink.style.display = "none";
+      }
+    });
+
+    // Logout
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          await signOut(auth);
+          alert("✅ Logged out successfully!");
+          window.location.href = "index.html";
+        } catch (error) {
+          alert("❌ Error: " + error.message);
+        }
+      });
+    }
+
+    // Blood stats as cards
+    async function loadBloodStats() {
+      const donorsRef = collection(db, "donors");
+      const snapshot = await getDocs(donorsRef);
+
+      const counts = {};
+      snapshot.forEach((d) => {
+        const donor = d.data();
+        const bg = (donor.blood_group || "").toUpperCase();
+        if (!bg) return;
+        counts[bg] = (counts[bg] || 0) + 1;
+      });
+
+      const statsCards = document.getElementById("statsCards");
+      statsCards.innerHTML = "";
+
+      Object.keys(counts).forEach(bg => {
+        statsCards.innerHTML += `
+          <div class="card">
+            <h3>${bg}</h3>
+            <p>${counts[bg]} Donors</p>
+          </div>
+        `;
+      });
+
+      if (Object.keys(counts).length === 0) {
+        statsCards.innerHTML = "<p>No donor data available.</p>";
+      }
+    }
+    loadBloodStats();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

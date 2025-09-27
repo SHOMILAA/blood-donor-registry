@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="email" id="email" class="input" placeholder="Email" required>
+      <input type="password" id="password" class="input" placeholder="Password" required>
+      <button type="submit" id="loginBtn" class="btn">Login</button>
+    </form>
+    <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
+  </div>
+
+  <script type="module">
+    import { app, auth } from "./firebase.js";
+    import { getFirestore, doc, getDoc } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { signInWithEmailAndPassword } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    const db = getFirestore(app);
+
+    // ✅ Enter key jumps to next field
+    const inputs = document.querySelectorAll("#loginForm input");
+    inputs.forEach((input, index) => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const next = inputs[index + 1];
+          if (next) {
+            next.focus();
+          } else {
+            document.getElementById("loginBtn").click();
+          }
+        }
+      });
+    });
+
+    // ✅ Handle login
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data.role === "admin") {
+            window.location.href = "admin-dashboard.html";
+          } else {
+            window.location.href = "user-dashboard.html";
+          }
+        }
+      } catch (error) {
+        alert("❌ Error: " + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+

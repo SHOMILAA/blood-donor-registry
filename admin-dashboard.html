@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">🩸 Blood Donor Registry</div>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="search-donors.html">Search Donors</a></li>
+      <li><a href="admin-dashboard.html">Admin Dashboard</a></li>
+    </ul>
+    <div class="auth-links">
+      <a href="#" id="logoutBtn">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Admin Content -->
+  <section class="form-container">
+    <h2>👨‍💼 Admin Dashboard — All Donors</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Blood Group</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Address</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="donorTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Firebase Logic -->
+  <script type="module">
+    import { app, auth } from "./firebase.js";
+    import { getFirestore, collection, getDocs, doc, deleteDoc }
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { onAuthStateChanged, signOut }
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    const db = getFirestore(app);
+
+    async function loadDonors() {
+      const donorTable = document.getElementById("donorTable");
+      donorTable.innerHTML = "<tr><td colspan='8'>⏳ Loading donors...</td></tr>";
+
+      try {
+        const donorsRef = collection(db, "donors");
+        const snapshot = await getDocs(donorsRef);
+
+        donorTable.innerHTML = "";
+        let found = false;
+
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          donorTable.innerHTML += `
+            <tr>
+              <td>${d.name ? d.name : ""}</td>
+              <td>${d.age ? d.age : ""}</td>
+              <td>${d.blood_group ? d.blood_group : ""}</td>
+              <td>${d.phone ? d.phone : ""}</td>
+              <td>${d.email ? d.email : ""}</td>
+              <td>${d.address ? d.address : ""}</td>
+              <td>${d.available ? "✅ Available" : "❌ Not Available"}</td>
+              <td><button onclick="deleteDonor('${docSnap.id}')">❌ Delete</button></td>
+            </tr>`;
+          found = true;
+        });
+
+        if (!found) {
+          donorTable.innerHTML = "<tr><td colspan='8'>No donors found.</td></tr>";
+        }
+      } catch (error) {
+        donorTable.innerHTML = `<tr><td colspan='8'>❌ Error: ${error.message}</td></tr>`;
+      }
+    }
+
+    // Make delete function available
+    window.deleteDonor = async (id) => {
+      if (!confirm("Delete this donor?")) return;
+      try {
+        await deleteDoc(doc(db, "donors", id));
+        alert("✅ Donor deleted!");
+        loadDonors();
+      } catch (error) {
+        alert("❌ Error: " + error.message);
+      }
+    };
+
+    // Only allow signed-in users
+    onAuthStateChanged(auth, (user) => {
+      if (!user) window.location.href = "login.html";
+    });
+
+    // Load all donors on page load
+    loadDonors();
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await signOut(auth);
+      alert("✅ Logged out!");
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
+
+
+
+

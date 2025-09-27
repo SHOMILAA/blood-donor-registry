@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Profile - Blood Donor Registry</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">🩸 Blood Donor Registry</div>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="user-dashboard.html">My Dashboard</a></li>
+      <li><a href="profile.html">My Profile</a></li>
+    </ul>
+    <div class="auth-links">
+      <a href="#" id="logoutBtn">Logout</a>
+    </div>
+  </nav>
+
+  <section class="form-container">
+    <h2>👤 My Profile</h2>
+    <form id="profileForm">
+      <input type="text" id="name" class="input" placeholder="Full Name" required>
+      <input type="number" id="age" class="input" placeholder="Age" required>
+      <input type="text" id="address" class="input" placeholder="Address" required>
+      <input type="email" id="email" class="input" placeholder="Email" required>
+
+      <!-- Blood Group Dropdown -->
+      <label for="bloodGroup">Select Blood Group</label>
+      <select id="bloodGroup" class="input" required>
+        <option value="">--Select--</option>
+        <option value="A+">A+</option>
+        <option value="A-">A-</option>
+        <option value="B+">B+</option>
+        <option value="B-">B-</option>
+        <option value="AB+">AB+</option>
+        <option value="AB-">AB-</option>
+        <option value="O+">O+</option>
+        <option value="O-">O-</option>
+      </select>
+
+      <input type="text" id="phone" class="input" placeholder="Phone (10 digits)" required>
+
+      <select id="available" class="input">
+        <option value="true">Available</option>
+        <option value="false">Not Available</option>
+      </select>
+
+      <button type="button" id="updateBtn" class="btn">Update</button>
+      <button type="button" id="deleteBtn" class="btn" style="background:red;">Delete Profile</button>
+    </form>
+  </section>
+
+  <script type="module">
+    import { app, auth } from "./firebase.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { onAuthStateChanged, signOut } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    const db = getFirestore(app);
+    let currentUserId = null;
+
+    // Load profile details
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        const donorDoc = await getDoc(doc(db, "donors", currentUserId));
+        if (donorDoc.exists()) {
+          const data = donorDoc.data();
+          document.getElementById("name").value = data.name || "";
+          document.getElementById("age").value = data.age || "";
+          document.getElementById("address").value = data.address || "";
+          document.getElementById("email").value = data.email || "";
+          document.getElementById("bloodGroup").value = data.blood_group || "";
+          document.getElementById("phone").value = data.phone || "";
+          document.getElementById("available").value = data.available ? "true" : "false";
+        }
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    // Update profile with validation
+    document.getElementById("updateBtn").addEventListener("click", async () => {
+      const name = document.getElementById("name").value.trim();
+      const age = parseInt(document.getElementById("age").value.trim());
+      const address = document.getElementById("address").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const bloodGroup = document.getElementById("bloodGroup").value;
+      const phone = document.getElementById("phone").value.trim();
+      const available = document.getElementById("available").value === "true";
+
+      // Validation
+      if (!name || !age || !address || !email || !bloodGroup || !phone) {
+        alert("❌ Please fill in all fields.");
+        return;
+      }
+      if (age < 18) {
+        alert("❌ Only people aged 18 and above can donate blood.");
+        return;
+      }
+      if (!/^\d{10}$/.test(phone)) {
+        alert("❌ Phone number must be exactly 10 digits.");
+        return;
+      }
+
+      await setDoc(doc(db, "donors", currentUserId), {
+        name, age, address, email, blood_group: bloodGroup, phone, available
+      });
+
+      alert("✅ Profile updated!");
+    });
+
+    // Delete profile
+    document.getElementById("deleteBtn").addEventListener("click", async () => {
+      if (confirm("Are you sure you want to delete your profile?")) {
+        await deleteDoc(doc(db, "donors", currentUserId));
+        await signOut(auth);
+        alert("✅ Profile deleted. You are logged out.");
+        window.location.href = "signup.html";
+      }
+    });
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await signOut(auth);
+      alert("✅ Logged out!");
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
+
+
+
+

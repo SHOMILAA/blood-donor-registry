@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Donors</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">🩸 Blood Donor Registry</div>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="search-donors.html">Search Donors</a></li>
+    </ul>
+  </nav>
+
+  <section class="form-container">
+    <h2>🔍 Search Donors</h2>
+
+    <!-- Filter Dropdown -->
+    <label for="filter">Show:</label>
+    <select id="filter" class="input">
+      <option value="all">All Donors</option>
+      <option value="available">Only Available Donors</option>
+    </select>
+
+    <table border="1" cellpadding="8" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Blood Group</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Address</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="donorTable"></tbody>
+    </table>
+  </section>
+
+  <script type="module">
+    import { app } from "./firebase.js";
+    import { getFirestore, collection, getDocs } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const db = getFirestore(app);
+
+    async function loadDonors(filter) {
+      const donorTable = document.getElementById("donorTable");
+      donorTable.innerHTML = "<tr><td colspan='7'>⏳ Loading donors...</td></tr>";
+
+      try {
+        const donorsRef = collection(db, "donors");
+        const snapshot = await getDocs(donorsRef);
+
+        donorTable.innerHTML = "";
+        let found = false;
+
+        snapshot.forEach((docSnap) => {
+          const donor = docSnap.data();
+
+          // Skip if filter = available and donor not available
+          if (filter === "available" && !donor.available) return;
+
+          donorTable.innerHTML += `
+            <tr>
+              <td>${donor.name ? donor.name : ""}</td>
+              <td>${donor.age ? donor.age : ""}</td>
+              <td>${donor.blood_group ? donor.blood_group : ""}</td>
+              <td>${donor.phone ? donor.phone : ""}</td>
+              <td>${donor.email ? donor.email : ""}</td>
+              <td>${donor.address ? donor.address : ""}</td>
+              <td>${donor.available ? "✅ Available" : "❌ Not Available"}</td>
+            </tr>
+          `;
+          found = true;
+        });
+
+        if (!found) {
+          donorTable.innerHTML = "<tr><td colspan='7'>❌ No donors found</td></tr>";
+        }
+      } catch (error) {
+        donorTable.innerHTML = `<tr><td colspan='7'>❌ Error: ${error.message}</td></tr>`;
+      }
+    }
+
+    // Load default (all donors)
+    loadDonors("all");
+
+    // Reload when filter changes
+    document.getElementById("filter").addEventListener("change", (e) => {
+      loadDonors(e.target.value);
+    });
+  </script>
+</body>
+</html>
+
+
+
+
